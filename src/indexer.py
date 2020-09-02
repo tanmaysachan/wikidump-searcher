@@ -1,11 +1,14 @@
-import invertedindex
-import settings
-from settings import tok_reg, infobox_reg, categories_reg, references_reg, external_reg, links_reg
-
 import os
+import pickle
 import re
 import xml.sax.handler
 import Stemmer
+
+import invertedindex
+import settings
+from settings import tok_reg, infobox_reg, \
+                     categories_reg, references_reg, \
+                     external_reg, links_reg
 
 class Indexer(xml.sax.handler.ContentHandler):
     def __init__(self, data_path="", index_path=""):
@@ -26,7 +29,7 @@ class Indexer(xml.sax.handler.ContentHandler):
         self.all_token_count = 0
 
         self.stopwords = set()
-        # init_stopwords()
+        self.init_stopwords()
 
         self.stemmer = Stemmer.Stemmer('english')
 
@@ -62,6 +65,13 @@ class Indexer(xml.sax.handler.ContentHandler):
         self.cleanup()
 
         return (self.all_token_count, self.index.get_term_count())
+    
+    def init_stopwords(self):
+        try:
+            with open('stopwords.pickle', 'rb') as f:
+                self.stopwords = pickle.load(f)
+        except:
+            print('stopwords.pickle not found, no stopwords loaded...')
 
     # clean text
     def clean(self, text, remove_stopwords=True, stem=True):

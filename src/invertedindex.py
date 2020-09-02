@@ -78,7 +78,7 @@ class InvertedIndex():
         self.init_next_docblock()
 
     def merge_blocks(self):
-
+        pass;
 
     def cleanup(self):
         self.dump_remaining()
