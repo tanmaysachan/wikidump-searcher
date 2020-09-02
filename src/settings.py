@@ -1,4 +1,4 @@
-BLOCK_SIZE = 4000
+BLOCK_SIZE = 20000
 DOC_BLOCK_SIZE = 4000
 
 tok_reg = r'[^A-Za-z0-9]+'

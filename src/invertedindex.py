@@ -21,9 +21,9 @@ class InvertedIndex():
 
     def add_term(self, term, docid, frequency, tags):
         try:
-            self.index[term].append(str(docid) + "," + str(frequency) + "," + tags)
+            self.index[term].append(str(frequency) + "," + str(docid) + "," + tags)
         except:
-            self.index[term] = [str(docid) + "," + str(frequency) + "," + tags]
+            self.index[term] = [str(frequency) + "," + str(docid) + "," + tags]
 
             self.term_count += 1
             self.cur_token_count += 1
@@ -32,10 +32,9 @@ class InvertedIndex():
                 self.dump_block()
                 self.init_next_block()
 
-        print(self.index[term])
 
     def add_doc(self, docid, title):
-        self.title_map[docid] = title
+        self.doc_map[docid] = title
         self.cur_doc_count += 1
         
         if self.cur_doc_count > settings.DOC_BLOCK_SIZE:
@@ -53,7 +52,7 @@ class InvertedIndex():
 
         with open(block_path, "w+") as f:
             for key, value in sorted(self.index.items()):
-                f.write("{} {}".format(key, value))
+                f.write("{} {}\n".format(key, value))
 
     def init_next_docblock(self):
         self.cur_docblock_id += 1
@@ -66,7 +65,21 @@ class InvertedIndex():
 
         with open(docblock_path, "w+") as f:
             for key, value in sorted(self.doc_map.items()):
-                f.write("{} {}".format(key, value))
+                f.write("{} {}\n".format(key, value))
 
     def get_term_count(self):
         return self.term_count
+
+    def dump_remaining(self):
+        self.dump_block()
+        self.init_next_block()
+        
+        self.dump_docblock()
+        self.init_next_docblock()
+
+    def merge_blocks(self):
+
+
+    def cleanup(self):
+        self.dump_remaining()
+        merge_blocks()

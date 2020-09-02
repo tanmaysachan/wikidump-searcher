@@ -59,6 +59,8 @@ class Indexer(xml.sax.handler.ContentHandler):
     def parse_data(self):
         self.parser.parse(self.path)
         print('finished indexing...')
+        self.cleanup()
+
         return (self.all_token_count, self.index.get_term_count())
 
     # clean text
@@ -165,14 +167,17 @@ class Indexer(xml.sax.handler.ContentHandler):
 
         self.add_tag_to_terms(links, 'l', tokenize=False) # Don't tokenize links
 
+        self.index.add_doc(self.current_docid, self.current_title.strip())
         for key in self.local_term_map:
             fields = self.local_term_map[key].split(',')
             self.index.add_term(key, self.current_docid, int(fields[0]), fields[1])
-            print(fields[0], fields[1])
+    
+    def cleanup(self):
+        self.index.cleanup()
 
 if __name__ == '__main__':
     # for testing
-    indexer = Indexer(data_path='/mnt/c/Users/Tanmay/Documents/IRE/copywikidump.xml',
+    indexer = Indexer(data_path='/mnt/c/Users/Tanmay/Documents/IRE/wikidump.xml',
                       index_path='./inverted_index/')
 
     indexer.parse_data()
