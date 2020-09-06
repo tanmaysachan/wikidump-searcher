@@ -11,7 +11,7 @@ from settings import tok_reg, infobox_reg, \
                      external_reg, links_reg
 
 class Indexer(xml.sax.handler.ContentHandler):
-    def __init__(self, data_path="", index_path=""):
+    def __init__(self, index_path=""):
 
         self.index = invertedindex.InvertedIndex(index_path)
 
@@ -23,8 +23,6 @@ class Indexer(xml.sax.handler.ContentHandler):
         self.current_docid = 0
         self.current_content = ''
         self.current_title = ''
-
-        self.path = data_path
 
         self.all_token_count = 0
 
@@ -59,11 +57,15 @@ class Indexer(xml.sax.handler.ContentHandler):
         else:
             self.current_content += content.lower()
 
-    def parse_data(self):
-        self.parser.parse(self.path)
-        print('finished indexing...')
-        self.cleanup()
+    def parse_data(self, path):
+        self.parser.parse(path)
+        print('finished indexing for {}...'.format(path))
 
+    def finish_indexing(self):
+        # Set token count for BM-25
+        self.index.set_total_token_count(self.all_token_count)
+
+        self.cleanup()
         return (self.all_token_count, self.index.get_term_count())
     
     def init_stopwords(self):
@@ -109,10 +111,12 @@ class Indexer(xml.sax.handler.ContentHandler):
         self.local_term_map = {}
 
         
-        content = self.clean(set(tok for tok in self.tok_reg.split(self.current_content)
+        content = self.clean(set(tok for tok in self.tok_reg.split(self.current_content
+                                + ' ' + self.current_title.strip())
                             if tok != ''))
 
-        self.all_token_count += len(content)
+        token_count = len(content)
+        self.all_token_count += token_count
 
         for tok in content:
             if tok not in self.local_term_map:
@@ -126,8 +130,6 @@ class Indexer(xml.sax.handler.ContentHandler):
         title = self.clean(set(tok for tok in self.tok_reg.split(self.current_title) if tok != ''),
                            remove_stopwords=True,
                            stem=False) # Don't stem the title
-
-        self.all_token_count += len(title)
 
         for tok in title:
             try:
@@ -177,7 +179,8 @@ class Indexer(xml.sax.handler.ContentHandler):
 
         self.add_tag_to_terms(links, 'l', tokenize=False) # Don't tokenize links
 
-        self.index.add_doc(self.current_docid, self.current_title.strip())
+        self.index.add_doc(self.current_docid, self.current_title.strip(), token_count)
+
         for key in self.local_term_map:
             fields = self.local_term_map[key].split(',')
             self.index.add_term(key, self.current_docid, int(fields[0]), fields[1])
@@ -187,7 +190,7 @@ class Indexer(xml.sax.handler.ContentHandler):
 
 if __name__ == '__main__':
     # for testing
-    indexer = Indexer(data_path='/mnt/c/Users/Tanmay/Documents/IRE/wikidump.xml',
-                      index_path='./inverted_index/')
+    indexer = Indexer(index_path='./inverted_index/')
 
-    indexer.parse_data()
+    indexer.parse_data('/mnt/c/Users/Tanmay/Documents/IRE/wikidump.xml')
+    indexer.finish_indexing()

@@ -26,25 +26,34 @@ class InvertedIndex():
         self.cur_merged_index_id = 0
         self.cur_merged_index_name = "index_" + str(self.cur_merged_index_id)
 
+        self.total_doc_count = 0
+
+        self.total_token_count = 0
+
+    def set_total_token_count(self, tok_count):
+        self.total_token_count = tok_count
+
     def add_term(self, term, docid, frequency, tags):
         try:
-            self.index[term].append(str(frequency) + "," + str(docid) + "," + tags)
+            self.index[term].append(str(docid) + "," + str(frequency) + "," + tags)
         except:
-            self.index[term] = [str(frequency) + "," + str(docid) + "," + tags]
+            self.index[term] = [str(docid) + "," + str(frequency) + "," + tags]
 
             self.term_count += 1
             self.cur_token_count += 1
 
-            if self.cur_token_count > settings.BLOCK_SIZE:
+            if self.cur_token_count >= settings.BLOCK_SIZE:
                 self.dump_block()
                 self.init_next_block()
 
 
-    def add_doc(self, docid, title):
-        self.doc_map[docid] = title
+    def add_doc(self, docid, title, token_count):
+        # Store token count followed by title for BM-25
+        self.doc_map[docid] = str(token_count) + ' ' + title
+        self.total_doc_count += 1
         self.cur_doc_count += 1
         
-        if self.cur_doc_count > settings.DOC_BLOCK_SIZE:
+        if self.cur_doc_count >= settings.DOC_BLOCK_SIZE:
             self.dump_docblock()
             self.init_next_docblock()
 
@@ -72,7 +81,7 @@ class InvertedIndex():
 
         with open(docblock_path, "w+") as f:
             for key, value in sorted(self.doc_map.items()):
-                f.write("{} {}\n".format(key, ' '.join(value)))
+                f.write("{} {}\n".format(key, value))
 
     def get_term_count(self):
         return self.term_count
@@ -139,7 +148,7 @@ class InvertedIndex():
                     except:
                         pass
 
-            if token_count_merged_index > settings.MERGED_BLOCK_SIZE:
+            if token_count_merged_index >= settings.MERGED_BLOCK_SIZE:
                 print("dumping tokens...")
                 self.dump_merged_index_blocks()
                 self.init_next_merged_index_block()
@@ -164,6 +173,7 @@ class InvertedIndex():
         print('creating file {}'.format(merged_block_path))
         with open(merged_block_path, "w+") as f:
             for key, value in sorted(self.merged_index.items()):
+                # Store doc count for each term
                 f.write("{} {}\n".format(key, ' '.join(value)))
 
     def cleanup(self):
@@ -177,3 +187,10 @@ class InvertedIndex():
         for block in range(self.total_block_count):
             # Remove all blocks
             os.remove(os.path.join(self.path, "block_" + str(block)))
+
+        # generate stat file for implementation of BM-25
+        stat_file = os.path.join(self.path, settings.STATS_FILE)
+        with open(stat_file, "w+") as f:
+            f.write("NUM_DOCS=" + str(self.total_doc_count) + '\n')
+            f.write("TOKEN_COUNT=" + str(self.total_token_count) + '\n')
+            f.write("BLOCKS_CREATED=" + str(self.total_block_count) + '\n')

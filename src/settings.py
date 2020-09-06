@@ -8,3 +8,5 @@ categories_reg = r"\[\[category:(.*)\]\]"
 references_reg = r"\{\{cite(.*?)\}\}<"
 external_reg = r"==.*external links.*=="
 links_reg = r"(https?://\S+)"
+
+STATS_FILE = "STATS.txt"
