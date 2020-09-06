@@ -110,9 +110,9 @@ class Indexer(xml.sax.handler.ContentHandler):
     def index_content(self):
         self.local_term_map = {}
 
-        
+        # append title to the end 5 times to increase TF for title elements
         content = self.clean(set(tok for tok in self.tok_reg.split(self.current_content
-                                + ' ' + self.current_title.strip())
+                                + (' ' + self.current_title.strip())*3)
                             if tok != ''))
 
         token_count = len(content)

@@ -43,7 +43,7 @@ class QueryParser:
             print('stopwords.pickle not found, no stopwords loaded...')
 
 
-    def parse_query(self, query):
+    def parse_query(self, query, num_results=10):
         # have query_type as none/fields/regular
         query_type = 'none'
         if len(query) > 1 and query[1] == ':' and query[0] in 'tlrbic':
@@ -54,17 +54,30 @@ class QueryParser:
 
         if query_type == 'none':
             return ["invalid query"]
-        
-        _query = set(query.lower().split(' '))
-        _query = _query - self.stopwords
-        _query = [self.stemmer.stemWord(term) for term in _query]
-        print(_query)
 
-        if query_type == 'regular':
+        elif query_type == 'regular':
+            _query = set(query.lower().split(' '))
+            _query = _query - self.stopwords
+            _query = [self.stemmer.stemWord(term) for term in _query]
+
             self.ranker.process_terms(list(_query))
-            return self.ranker.get_top_n(n = 10)
+            return self.ranker.get_top_n(n=num_results)
+        
+        elif query_type == 'fields':
+            _query = query.lower().split(' ')
 
+            _query_terms = []
+            for i in range(len(_query)):
+                if _query[i][1] == ':':
+                    cur_tag = _query[i][0]
+                    if cur_tag not in 'tlrbic':
+                        return ["invalid query"]
+                    if _query[i][2:] not in self.stopwords:
+                        _query_terms.append(_query[i])
+                else:
+                    _query[i] = cur_tag + ':' + _query[i]
+                    if _query[i][2:] not in self.stopwords:
+                        _query_terms.append(_query[i])
 
-if __name__ == '__main__':
-    qp = QueryParser(index_path='./inverted_index/')
-    qp.parse_query('reg query of that')
+            self.ranker.process_terms(list(_query_terms))
+            return self.ranker.get_top_n(n=num_results)

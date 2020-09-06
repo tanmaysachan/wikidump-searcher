@@ -27,6 +27,8 @@ class BM25:
 
         self.docid_to_score = {}
 
+        self.term_to_tags = {}
+
     def get_block_path(self, block_number):
         return os.path.join(self.path, "index_" + str(block_number))
 
@@ -42,8 +44,17 @@ class BM25:
         self.relevant_docids = set()
 
         for term in terms:
-            self.terms[term] = {}
-            self.terms_list.append(term)
+            # handle fields
+            _term = term
+            if term[1] == ':':
+                _term = term[2:]
+                try:
+                    self.term_to_tags[_term] += term[0]
+                except:
+                    self.term_to_tags[_term] = term[0]
+
+            self.terms[_term] = {}
+            self.terms_list.append(_term)
 
         self.terms_list.sort()
 
@@ -95,9 +106,19 @@ class BM25:
                             contents = posting.split(',')
                             docid = contents[0]
                             freq = contents[1]
+                            tags = contents[2]
 
-                            self.terms[self.terms_list[cur_ind]][int(docid)] = int(freq)
-                            self.relevant_docids.add(int(docid))
+                            add_term = False
+                            try:
+                                for char in self.term_to_tags[self.terms_list[cur_ind]]:
+                                    if char in tags:
+                                        add_term = True
+                            except:
+                                add_term = True
+
+                            if add_term:
+                                self.terms[self.terms_list[cur_ind]][int(docid)] = int(freq)
+                                self.relevant_docids.add(int(docid))
 
                         cur_ind += 1
 
@@ -163,9 +184,3 @@ class BM25:
                 break
 
         return [self.docid_to_title[docid] for docid in result]
-
-if __name__ == '__main__':
-    # testing BM-25
-    bm = BM25(index_path='./inverted_index/', doccount=19797, tokcount=22924729)
-    bm.process_terms(['world', 'cup'])
-    print(bm.get_top_n())
