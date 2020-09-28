@@ -95,21 +95,47 @@ class InvertedIndex():
     
     # Implementation of SPIMI algorithm for indexing
 
-    def merge_blocks(self):
+    def merge_blocks(self, block_count=-1):
+        print("merging blocks...")
+
+        if block_count == -1:
+            block_count = 1000000
+
         done = False # Triggered when all blocks get EOF
 
         file_iters = []
 
-        for block in range(self.total_block_count):
+        for block in range(block_count):
             block_file_name = "block_" + str(block)
-            file_iters.append(open(os.path.join(self.path, block_file_name), "r"))
+
+            # TODO revert
+            # file_iters.append(open(os.path.join(self.path, block_file_name), "r"))
+
+            try:
+                _f = open(os.path.join("./backup_data/", block_file_name), "r")
+                file_iters.append(_f)
+            except:
+                break
         
         heap = []
         entries = []
         for f_iter in file_iters:
             line = f_iter.readline().strip().split(' ')
+            title = line[0]
             entries.append(line)
-            heapq.heappush(heap, line[0])
+            if len(line) <= settings.MAX_POSTING_LIST_SIZE:
+                entries.append(line)
+            else:
+                to_append = [line[0]]
+                for elem in line[1:]:
+                    contents = elem.split(',')
+                    # append element only if term freq more than 1,
+                    # or if term in a field
+                    if int(contents[1]) > 1 or len(contents[2]) != 0:
+                        to_append.append(elem)
+
+                entries.append(to_append)
+            heapq.heappush(heap, title)
 
         token_count_merged_index = 0
 
@@ -139,12 +165,21 @@ class InvertedIndex():
                 if entries[i][0] == least_elem:
                     files_touched = True
                     # Append the posting list
-                    self.merged_index[least_elem] += entries[i][1:]
+                    # if number of postings greater than this, IDF is essentially 0
+                    if len(entries[i][1:]) <= settings.MAX_POSTING_LIST_SIZE:
+                        self.merged_index[least_elem] += entries[i][1:]
+                    else:
+                        for elem in entries[i][1:]:
+                            contents = elem.split(',')
+                            # append element only if term freq more than 1,
+                            # or if term in a field
+                            if int(contents[1]) > 1 or len(contents[2]) != 0:
+                                self.merged_index[least_elem].append(elem)
+                        continue
                     # Increment file pointer
                     try:
                         entries[i] = file_iters[i].readline().strip().split(' ')
                         heapq.heappush(heap, entries[i][0])
-                        cnt += 1
                     except:
                         pass
 
@@ -194,3 +229,5 @@ class InvertedIndex():
             f.write("NUM_DOCS=" + str(self.total_doc_count) + '\n')
             f.write("TOKEN_COUNT=" + str(self.total_token_count) + '\n')
             f.write("BLOCKS_CREATED=" + str(self.total_block_count) + '\n')
+            f.write("MERGED_BLOCKS_CREATED=" + str(self.cur_merged_index_id) + '\n')
+            f.write("DOC_BLOCKS_CREATED=" + str(self.cur_docblock_id) + '\n')

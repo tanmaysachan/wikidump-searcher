@@ -1,5 +1,6 @@
 import os
 from math import log2
+from datetime import datetime
 
 import settings
 
@@ -29,6 +30,8 @@ class BM25:
 
         self.term_to_tags = {}
 
+        self.term_penalty = {}
+
     def get_block_path(self, block_number):
         return os.path.join(self.path, "index_" + str(block_number))
 
@@ -42,11 +45,14 @@ class BM25:
         self.index_blocks_to_check = set()
         self.doc_blocks_to_check = set()
         self.relevant_docids = set()
+        self.term_penalty = {}
+        self.term_to_tags = {}
+        self.docid_to_score = {}
 
         for term in terms:
             # handle fields
             _term = term
-            if term[1] == ':':
+            if len(term) > 1 and term[1] == ':':
                 _term = term[2:]
                 try:
                     self.term_to_tags[_term] += term[0]
@@ -60,14 +66,17 @@ class BM25:
 
         current_block = 0
         done = False
+
+        init_block = self.get_block_path(current_block)
+        term1 = ''
+        with open(init_block, "r") as f:
+            term1 = f.readline().split(' ')[0]
+
         while not done:
-            block_path = self.get_block_path(current_block)
             next_block_path = self.get_block_path(current_block+1)
 
             # term1 = first term of block
             # term2 = first term of next block
-            with open(block_path, "r") as f:
-                term1 = f.readline().split(' ')[0]
 
             try:
                 with open(next_block_path, "r") as f:
@@ -77,16 +86,21 @@ class BM25:
                 term2 = 'z'*100 # random high indexed term
                 done = True
 
-            for term in self.terms:
+            for term in self.terms_list:
                 if term >= term1 and term < term2:
                     self.index_blocks_to_check.add(current_block)
 
             current_block += 1
+            term1 = term2
         
         self.search_blocks()
 
     def search_blocks(self):
         # store index of term in terms_list
+        print('yeet')
+
+        list_tf_idfs = {}
+
         cur_ind = 0
         for block in sorted(self.index_blocks_to_check):
             block_path = self.get_block_path(block)
@@ -98,31 +112,66 @@ class BM25:
 
                     while line[0] > self.terms_list[cur_ind]:
                         cur_ind += 1
+                        if cur_ind >= len(self.terms_list):
+                            break
+
+                    if cur_ind >= len(self.terms_list):
+                        break
 
                     if line[0] == self.terms_list[cur_ind]:
                         line = line[1:]
+                        _term = self.terms_list[cur_ind]
+
                         for posting in line:
                             # parse content from index blocks
                             contents = posting.split(',')
                             docid = contents[0]
-                            freq = contents[1]
+                            freq = int(contents[1])
                             tags = contents[2]
 
-                            add_term = False
-                            try:
-                                for char in self.term_to_tags[self.terms_list[cur_ind]]:
-                                    if char in tags:
-                                        add_term = True
-                            except:
-                                add_term = True
+                            tf_idf = self.get_tf_idf(freq, self.get_idf(_term))
 
-                            if add_term:
-                                self.terms[self.terms_list[cur_ind]][int(docid)] = int(freq)
-                                self.relevant_docids.add(int(docid))
+                            try:
+                                list_tf_idfs[int(docid)] += tf_idf
+                            except:
+                                list_tf_idfs[int(docid)] = tf_idf
+
+                            penalise_term = True
+                            try:
+                                for char in self.term_to_tags[_term]:
+                                    if char in tags:
+                                        # Increasing TF-IDF based on fields
+                                        if char == 't':
+                                            list_tf_idfs[int(docid)] += 10
+                                        if char == 'i':
+                                            list_tf_idfs[int(docid)] += 5
+                                        penalise_term = False
+                            except:
+                                penalise_term = False
+
+                            self.terms[self.terms_list[cur_ind]][int(docid)] = freq
+                            self.relevant_docids.add(int(docid))
+
+                            if penalise_term:
+                                _term = self.terms_list[cur_ind]
+                                try:
+                                    self.term_penalty[_term].add(int(docid))
+                                except:
+                                    self.term_penalty[_term] = set()
+                                    self.term_penalty[_term].add(int(docid))
 
                         cur_ind += 1
 
                     line = f.readline()
+
+        cnt = 0
+        for key, value in sorted(list_tf_idfs.items(), key=lambda x: x[1], reverse=True):
+            cnt += 1
+            if cnt > 100:
+                try:
+                    self.relevant_docids.remove(key)
+                except:
+                    pass
 
         self.process_docids()
 
@@ -150,6 +199,15 @@ class BM25:
 
                     line = f.readline()
 
+        print('process_docids done = ', datetime.now())
+
+    def get_idf(self, term):
+        return log2(((self.doccount - len(self.terms[term]) + 0.5)/ \
+               (len(self.terms[term]) + 0.5)) + 1)
+
+    def get_tf_idf(self, tf, idf):
+        return tf*idf
+
     def rank_docs(self):
         for docid in self.relevant_docids:
             self.docid_to_score[docid] = 0
@@ -162,15 +220,27 @@ class BM25:
                 except:
                     continue
 
-                IDF = log2(((self.doccount - len(self.terms[term]) + 0.5)/ \
-                      (len(self.terms[term]) + 0.5)) + 1)
+                try:
+                    IDF = self.get_idf(term)
 
-                score += ((IDF * TF * (self.k1 + 1)) / \
-                         (TF + (self.k1 * (1 - self.b + (self.b * \
-                         (self.docid_to_length[docid]/ \
-                          self.average_doc_length))))))
+                    to_add = ((IDF * TF * (self.k1 + 1)) / \
+                             (TF + (self.k1 * (1 - self.b + (self.b * \
+                             (self.docid_to_length[docid]/ \
+                              self.average_doc_length))))))
+                except:
+                    continue
+
+                try:
+                    if docid in self.term_penalty[term]:
+                        score += to_add/2
+                    else:
+                        score += to_add
+                except:
+                    score += to_add
 
             self.docid_to_score[docid] = score
+
+        print('rank_docs done = ', datetime.now())
 
     def get_top_n(self, n=10):
         # get ranks
@@ -183,4 +253,4 @@ class BM25:
             if len(result) >= n:
                 break
 
-        return [self.docid_to_title[docid] for docid in result]
+        return [str(docid) + ', ' + self.docid_to_title[docid] for docid in result]

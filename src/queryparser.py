@@ -52,6 +52,7 @@ class QueryParser:
         elif (len(query) > 1 and query[1] != ':') or (len(query) <= 1):
             query_type = 'regular'
 
+        print(query_type)
         if query_type == 'none':
             return ["invalid query"]
 
@@ -62,7 +63,7 @@ class QueryParser:
 
             self.ranker.process_terms(list(_query))
             return self.ranker.get_top_n(n=num_results)
-        
+
         elif query_type == 'fields':
             _query = query.lower().split(' ')
 
@@ -78,6 +79,5 @@ class QueryParser:
                     _query[i] = cur_tag + ':' + _query[i]
                     if _query[i][2:] not in self.stopwords:
                         _query_terms.append(_query[i])
-
             self.ranker.process_terms(list(_query_terms))
             return self.ranker.get_top_n(n=num_results)

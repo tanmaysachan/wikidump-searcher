@@ -1,2 +1,4 @@
 src/__pycache__/
 src/inverted_index/
+src/backup_data/
+src/queries_op.txt

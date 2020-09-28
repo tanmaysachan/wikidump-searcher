@@ -8,7 +8,8 @@ import invertedindex
 import settings
 from settings import tok_reg, infobox_reg, \
                      categories_reg, references_reg, \
-                     external_reg, links_reg
+                     external_reg, links_reg, \
+                     ignore_reg
 
 class Indexer(xml.sax.handler.ContentHandler):
     def __init__(self, index_path=""):
@@ -37,6 +38,7 @@ class Indexer(xml.sax.handler.ContentHandler):
         self.references_reg = re.compile(references_reg)
         self.external_reg = re.compile(external_reg)
         self.links_reg = re.compile(links_reg)
+        self.ignore_reg = re.compile(ignore_reg)
 
         self.local_term_map = {}
 
@@ -104,13 +106,18 @@ class Indexer(xml.sax.handler.ContentHandler):
                     if tag not in self.local_term_map[tok]:
                         self.local_term_map[tok] += tag
                 except:
+                    if len(tok) > 4 and tok[0] in '0123456789':
+                        continue
+                    if self.ignore_reg.match(tok):
+                        continue
+
                     self.local_term_map[tok] = '1,' + tag
 
     # Main class to index parsed content
     def index_content(self):
         self.local_term_map = {}
 
-        # append title to the end 5 times to increase TF for title elements
+        # append title to the end 3 times to increase TF for title elements
         content = self.clean(set(tok for tok in self.tok_reg.split(self.current_content
                                 + (' ' + self.current_title.strip())*3)
                             if tok != ''))
@@ -118,11 +125,26 @@ class Indexer(xml.sax.handler.ContentHandler):
         token_count = len(content)
         self.all_token_count += token_count
 
+        ignored_tokens = 0
+
         for tok in content:
+            #ignore such tokens, if its not a year
+            if len(tok) > 4 and tok[0] in '0123456789':
+                ignored_tokens += 1
+                continue
+
+            #ignore tokens which match
+            if self.ignore_reg.match(tok):
+                ignored_tokens += 1
+                continue
+
             if tok not in self.local_term_map:
                 self.local_term_map[tok] = 1
             else:
                 self.local_term_map[tok] += 1
+
+        token_count -= ignored_tokens
+        self.all_token_count -= ignored_tokens
 
         for key in self.local_term_map:
             self.local_term_map[key] = str(self.local_term_map[key]) + ','
@@ -145,16 +167,20 @@ class Indexer(xml.sax.handler.ContentHandler):
         for cont in infobox:
             dep = 1
             _cont = cont[0]
-            for i in range(len(_cont)):
-                if _cont[i] == '{' and _cont[i + 1] == '{':
-                    i += 1
-                    dep += 1
-                if _cont[i] == '}' and _cont[i + 1] == '}':
-                    i += 1
-                    dep -= 1
-                    if dep == 0:
-                        infobox_data.append(_cont[:i - 1])
-                        break
+
+            try:
+                for i in range(len(_cont)):
+                    if _cont[i] == '{' and _cont[i + 1] == '{':
+                        i += 1
+                        dep += 1
+                    if _cont[i] == '}' and _cont[i + 1] == '}':
+                        i += 1
+                        dep -= 1
+                        if dep == 0:
+                            infobox_data.append(_cont[:i - 1])
+                            break
+            except:
+                continue
 
         self.add_tag_to_terms(infobox_data, 'i')
 

@@ -1,6 +1,5 @@
-# wikidump-indexer
+# wikidump-search
 Indexes the wikidump using SPIMI
+Searches using BM-25
 
-* `pip install -r requirements.txt`
-* `index.sh /path/to/dump/ /path/to/inverted_index_directory/ /path/to/stats_file/` to index the dump
-* `search.sh /path/to/inverted_index_directory/ query` to query the dump
+Put queries in `src/queries.txt`, run `python search.py` to search
