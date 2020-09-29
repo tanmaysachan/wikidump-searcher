@@ -2,7 +2,7 @@ BLOCK_SIZE = 1000000
 DOC_BLOCK_SIZE = 2000
 MERGED_BLOCK_SIZE = 10000
 
-MAX_POSTING_LIST_SIZE = 100000
+MAX_POSTING_LIST_SIZE = 50000
 
 tok_reg = r'[^A-Za-z0-9]+'
 infobox_reg = r"{{infobox((.|\n)*)}}\n"

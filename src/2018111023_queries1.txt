@@ -1,0 +1,25 @@
+10, b:Redmond i:Los Angeles Kings c:1965 births
+10, t:Burton Agnes c:Grade I listed houses i:Burton Agnes
+20, Trinec Steel Works
+10, b:Amiata c:Companies based in Florence
+20, Wong-fat
+10, Chongqing University
+5, Combat School
+10, Blade Runner
+10, b:Prisoner of Azkaban i:1999
+10, t:love b:Arrows
+10, 2005 earthquake
+10, t:Agostini
+5, t:Commonwealth Games i:melbourne b:Stolenwealth c:sports
+20, youngs modulus
+20, t:Combat i:konami
+10, t:Zariski-Riemann c:Bernhard Riemann
+20, boeing 341
+5, String Quartet 14 Dvorak
+3, b:V for Vendetta i:2006
+5, young's modulus
+10, b:Speed of light c:Concepts in physics
+20, b:angus r:tories i:James Lee
+30, b:Taxicab 1729
+50, b:Marc Spector i:Marvel Comics c:1980 comics debuts
+100, Sudebnik

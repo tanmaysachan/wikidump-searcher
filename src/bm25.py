@@ -1,6 +1,7 @@
 import os
 from math import log2
 from datetime import datetime
+from random import randint
 
 import settings
 
@@ -97,8 +98,6 @@ class BM25:
 
     def search_blocks(self):
         # store index of term in terms_list
-        print('yeet')
-
         list_tf_idfs = {}
 
         cur_ind = 0
@@ -176,6 +175,9 @@ class BM25:
         self.process_docids()
 
     def process_docids(self):
+        while len(self.relevant_docids) < 100:
+            self.relevant_docids.add(randint(0, 8918900))
+
         self.relevant_docids = sorted(list(self.relevant_docids))
         cur_ind = 0
 

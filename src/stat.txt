@@ -1,0 +1,3 @@
+index size = 14 GB
+number of files = 7425
+number of tokens = 17233209

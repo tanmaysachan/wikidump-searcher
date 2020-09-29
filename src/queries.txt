@@ -1,6 +1,0 @@
-5, t:world cup
-5, 25 December
-10, t:pink city
-3, t:John Mayer
-2, t:shakira
-10, t:windows 10

@@ -69,7 +69,7 @@ class QueryParser:
 
             _query_terms = []
             for i in range(len(_query)):
-                if _query[i][1] == ':':
+                if len(_query[i]) > 1 and _query[i][1] == ':':
                     cur_tag = _query[i][0]
                     if cur_tag not in 'tlrbic':
                         return ["invalid query"]

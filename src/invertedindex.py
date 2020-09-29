@@ -108,12 +108,8 @@ class InvertedIndex():
         for block in range(block_count):
             block_file_name = "block_" + str(block)
 
-            # TODO revert
-            # file_iters.append(open(os.path.join(self.path, block_file_name), "r"))
-
             try:
-                _f = open(os.path.join("./backup_data/", block_file_name), "r")
-                file_iters.append(_f)
+                file_iters.append(open(os.path.join(self.path, block_file_name), "r"))
             except:
                 break
         
@@ -122,7 +118,6 @@ class InvertedIndex():
         for f_iter in file_iters:
             line = f_iter.readline().strip().split(' ')
             title = line[0]
-            entries.append(line)
             if len(line) <= settings.MAX_POSTING_LIST_SIZE:
                 entries.append(line)
             else:
@@ -164,8 +159,10 @@ class InvertedIndex():
             for i in range(len(entries)):
                 if entries[i][0] == least_elem:
                     files_touched = True
+
                     # Append the posting list
                     # if number of postings greater than this, IDF is essentially 0
+
                     if len(entries[i][1:]) <= settings.MAX_POSTING_LIST_SIZE:
                         self.merged_index[least_elem] += entries[i][1:]
                     else:
